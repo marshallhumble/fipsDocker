@@ -1,8 +1,8 @@
 # FIPS-Compliant Python Docker Image
 
-[![Build Status](https://github.com/marshallhumble/fips-python-docker/actions/workflows/build-and-scan.yml/badge.svg)](https://github.com/your-org/fips-python-docker/actions)
+[![Build Status](https://github.com/marshallhumble/fipsDocker/actions/workflows/build-and-scan.yml/badge.svg)](https://github.com/marshallhumble/fipsDocker/actions)
 [![SBOM](https://img.shields.io/badge/SBOM-SPDX-blue)](./sbom.spdx.json)
-[![License](https://img.shields.io/github/license/marshallhumble/fips-python-docker)](./LICENSE)
+[![License](https://img.shields.io/github/license/marshallhumble/fipsDocker)](./LICENSE)
 
 A FIPS 140-2 compliant Python 3.11 container image with OpenSSL and `cryptography` built from source.
 
