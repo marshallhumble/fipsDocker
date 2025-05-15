@@ -1,8 +1,8 @@
 # Makefile for building and testing FIPS-compliant Python Docker image
 
 IMAGE_NAME := fips-python
-TAG := 3.11.12 # tag with python version
-PLATFORM := linux/arm64
+TAG := 3.11.12 #Tag with python version
+PLATFORM := linux/amd64
 DOCKERFILE := Dockerfile
 
 build:
@@ -22,14 +22,3 @@ shell:
 
 clean:
 	docker image rm $(IMAGE_NAME):$(TAG) || true
-
-trivy-scan:
-	trivy image --severity CRITICAL,HIGH $(IMAGE_NAME):$(TAG)
-
-trivy-sbom:
-	trivy image --format spdx-json --output sbom.spdx.json $(IMAGE_NAME):$(TAG)
-
-build-all:
-	$(MAKE) build-load && \
-	$(MAKE) trivy-scan && \
-	$(MAKE) trivy-sbom

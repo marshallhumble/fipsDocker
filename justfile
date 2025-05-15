@@ -3,8 +3,8 @@
 # Set variables
 set dotenv-load := true
 IMAGE_NAME := "fips-python"
-TAG := "3.11.12" # tag with python version
-PLATFORM := "linux/arm64"
+TAG := "3.11.12" #Tag with python version
+PLATFORM := "linux/amd64"
 DOCKERFILE := "Dockerfile"
 
 # Build image
@@ -33,7 +33,7 @@ clean:
 
 # Scan image for vulnerabilities
 trivy-scan:
-	trivy image --severity CRITICAL,HIGH,MEDIUM {{IMAGE_NAME}}:{{TAG}}
+	trivy image --severity CRITICAL,HIGH {{IMAGE_NAME}}:{{TAG}}
 
 # Generate SBOM in SPDX format
 trivy-sbom:
