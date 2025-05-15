@@ -2,7 +2,7 @@
 
 IMAGE_NAME := fips-python
 TAG := latest
-PLATFORM := linux-aarch64
+PLATFORM := linux/arm64
 DOCKERFILE := Dockerfile
 
 build:
