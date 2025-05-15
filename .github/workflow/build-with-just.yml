@@ -1,9 +1,0 @@
-name: Docker build with just
-on: push
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run just build
-        run: just build
