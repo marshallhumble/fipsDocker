@@ -1,7 +1,7 @@
 ### --- Stage 1: FIPS Core (OpenSSL, wget, curl) ---
 FROM alpine:latest AS fipscore
 
-ARG OPENSSL_VERSION=3.1.5
+ARG OPENSSL_VERSION=3.1.2
 ARG BUILD_ARCH=linux-aarch64
 
 ENV PATH=/usr/local/bin:$PATH
