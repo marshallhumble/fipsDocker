@@ -3,7 +3,7 @@
 # Set variables
 set dotenv-load := true
 IMAGE_NAME := "fips-python"
-TAG := "latest"
+TAG := "3.11.12" # tag with python version
 PLATFORM := "linux/arm64"
 DOCKERFILE := "Dockerfile"
 
