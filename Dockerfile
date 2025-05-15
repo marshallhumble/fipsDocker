@@ -2,6 +2,9 @@
 FROM alpine:latest AS fipscore
 
 ARG OPENSSL_VERSION=3.1.2
+ARG WGET2_VERSION=latest
+ARG CURL_VERSION=8.7.1
+
 ARG BUILD_ARCH=linux-aarch64
 
 ENV PATH=/usr/local/bin:$PATH
@@ -15,8 +18,8 @@ RUN apk add --no-cache \
 
 # Download sources
 RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
-    && wget https://ftp.gnu.org/gnu/wget/wget-1.21.4.tar.gz \
-    && wget https://curl.se/download/curl-8.7.1.tar.gz
+    && wget https://ftp.gnu.org/gnu/wget/wget2-${WGET2_VERSION}.tar.gz \
+    && wget https://curl.se/download/curl-${CURL_VERSION}.tar.gz
 
 # Build and install OpenSSL with FIPS
 RUN tar -xf openssl-${OPENSSL_VERSION}.tar.gz \
@@ -51,27 +54,29 @@ RUN printf '%s\n' \
   > /etc/ssl/openssl.cnf
 
 # Rebuild wget against FIPS OpenSSL
-RUN tar -xzf wget-1.21.4.tar.gz \
-    && cd wget-1.21.4 \
+RUN mkdir wget_build \
+    && tar -xzf wget2-${WGET2_VERSION}.tar.gz -C wget_build --strip-components=1 \
+    && cd wget_build \
     && ./configure --with-ssl=openssl --with-libssl-prefix=/usr/local \
     && make -j$(nproc) \
     && make install \
     && cd .. \
-    && rm -rf wget-1.21.4*
+    && rm -rf wget_build*
 
 # Rebuild curl against FIPS OpenSSL
-RUN tar -xzf curl-8.7.1.tar.gz \
-    && cd curl-8.7.1 \
+RUN mkdir curl_build \
+    && tar -xzf curl-${CURL_VERSION}.tar.gz -C curl_build --strip-components=1 \
+    && cd curl_build \
     && ./configure --with-ssl=/usr/local --disable-shared --enable-static \
     && make -j$(nproc) \
     && make install \
     && cd .. \
-    && rm -rf curl-8.7.1*
+    && rm -rf curl_build*
 
 ### --- Stage 2: Python & Cryptography ---
 FROM alpine:latest AS pythoncrypto
 
-ARG PYTHON_VERSION=3.11.8
+ARG PYTHON_VERSION=3.11.12
 
 ENV PATH=/usr/local/bin:$PATH
 ENV LANG=C.UTF-8
@@ -140,8 +145,6 @@ RUN strip --strip-unneeded /usr/local/bin/python3 || true \
     && strip --strip-unneeded /usr/local/lib/libcrypto.so* || true \
     && find /usr/local -name '*.a' -delete \
     && find /usr/local -name '*.la' -delete \
-    && find /usr/local -name '__pycache__' -type d -exec rm -r {} + \
-    && find /usr/local -name '*.pyc' -delete \
     && rm -rf /usr/local/lib/python3.11/test
 
 # Smoke test
