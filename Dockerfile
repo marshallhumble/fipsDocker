@@ -55,6 +55,8 @@ RUN printf '%s\n' \
 FROM alpine:latest AS pythoncrypto
 
 ARG PYTHON_VERSION=3.11.12
+ARG TARGETARCH
+ARG BUILD_ARCH=linux-${TARGETARCH}
 
 ENV PATH=/usr/local/bin:$PATH
 ENV LANG=C.UTF-8
@@ -90,6 +92,7 @@ RUN tar -xf Python-${PYTHON_VERSION}.tgz \
     && make install \
     && cd .. && rm -rf Python-${PYTHON_VERSION}*
 
+RUN python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
 
 # Install pip and cryptography
 RUN python3 get-pip.py \

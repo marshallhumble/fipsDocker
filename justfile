@@ -29,7 +29,10 @@ build-load:
 
 # Build and push to remote registry
 build-push:
-	docker buildx build --platform {{PLATFORM}} -t {{IMAGE_NAME}}:{{TAG}} --push -f {{DOCKERFILE}} .
+    docker buildx build \
+      --platform linux/arm64 \
+      --tag ${IMAGE_NAME}:${IMAGE_TAG} \
+      --push .
 
 # Run the image
 run:
@@ -58,6 +61,12 @@ trivy-scan:
 # Generate SBOM in SPDX format
 trivy-sbom:
 	trivy image --format spdx-json --output sbom.spdx.json {{IMAGE_NAME}}:{{TAG}}
+
+sign-image:
+    cosign sign --yes ${IMAGE_NAME}:${IMAGE_TAG}
+
+publish:
+    just build-push && just sign-image
 
 # Run full build + scan + sbom
 build-all:
