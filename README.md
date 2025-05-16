@@ -1,6 +1,5 @@
 # FIPS-Compliant Python Docker Image
 
-[![Build Status](https://github.com/marshallhumble/fipsDocker/actions/workflows/build-and-scan.yml/badge.svg)](https://github.com/marshallhumble/fipsDocker/actions)
 [![SBOM](https://img.shields.io/badge/SBOM-SPDX-blue)](./sbom.spdx.json)
 [![License](https://img.shields.io/github/license/marshallhumble/fipsDocker)](./LICENSE)
 
