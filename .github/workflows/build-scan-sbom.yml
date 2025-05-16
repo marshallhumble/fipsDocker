@@ -46,3 +46,4 @@ jobs:
           ${{ steps.scan.outputs.summary }}
           ```
         file: trivy-vuln.txt
+        platform: linux/amd64,linux/arm64
