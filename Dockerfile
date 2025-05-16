@@ -15,12 +15,16 @@ RUN apk add --no-cache \
     bzip2-dev zlib-dev autoconf automake libtool cmake curl-dev libintl ca-certificates
 
 # Build and install OpenSSL with FIPS
+# Build and install OpenSSL with FIPS (no docs)
 RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure ${BUILD_ARCH} enable-fips shared no-tests no-unit-test enable-ec_nistp_64_gcc_128 --prefix=/usr/local \
-    && make install \
-    && make install_fips
+    && ./Configure ${BUILD_ARCH} enable-fips shared enable-ec_nistp_64_gcc_128 --prefix=/usr/local \
+    && make -j"$(nproc)" build_sw \
+    && make install_sw \
+    && make install_fips \
+    && cd .. && rm -rf openssl-${OPENSSL_VERSION}*
+
 
 # Configure OpenSSL FIPS
 RUN printf '%s\n' \
@@ -82,8 +86,10 @@ ENV CFLAGS="-I/usr/local/include"
 RUN tar -xf Python-${PYTHON_VERSION}.tgz \
     && cd Python-${PYTHON_VERSION} \
     && ./configure --enable-optimizations --enable-shared --with-ensurepip=no --with-openssl=/usr/local \
-    && make -j1 \
-    && make install
+    && make -j"$(nproc)" \
+    && make install \
+    && cd .. && rm -rf Python-${PYTHON_VERSION}*
+
 
 # Install pip and cryptography
 RUN python3 get-pip.py \
