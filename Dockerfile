@@ -71,9 +71,6 @@ RUN wget -q https://bootstrap.pypa.io/get-pip.py \
     && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable && \
            ln -s /root/.cargo/bin/* /usr/local/bin/
 
-RUN python3 get-pip.py \
-    && rm get-pip.py
-
 COPY --from=opensslbuild /usr/local /usr/local
 COPY --from=opensslbuild /etc/ssl /etc/ssl
 
@@ -95,7 +92,9 @@ RUN tar -xf Python-${PYTHON_VERSION}.tgz \
 
 
 # Install pip and cryptography
-RUN pip install --no-binary cryptography cryptography
+RUN python3 get-pip.py \
+    && rm get-pip.py  \
+    && pip install --no-binary cryptography cryptography
 
 # Clean up unnecessary files to reduce image size
 RUN strip --strip-unneeded /usr/local/bin/python3 || true \
