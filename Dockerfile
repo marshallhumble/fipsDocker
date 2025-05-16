@@ -72,7 +72,7 @@ RUN wget -q https://bootstrap.pypa.io/get-pip.py \
            ln -s /root/.cargo/bin/* /usr/local/bin/ \
 
 RUN python3 get-pip.py \
-    && rm get-pip.py \
+    && rm get-pip.py
 
 COPY --from=opensslbuild /usr/local /usr/local
 COPY --from=opensslbuild /etc/ssl /etc/ssl
