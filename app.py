@@ -1,16 +1,28 @@
-import hashlib
-from flask import Flask
-from waitress import serve
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route("/")
-def hello():
+@app.get("/", response_class=HTMLResponse)
+async def fips_check():
     try:
-        hashlib.md5()
-        return "MD5 is available (FIPS compliance check failed)"
-    except ValueError as e:
-        return "MD5 is not available (FIPS compliance check passed): {e}"
+        digest = hashes.Hash(hashes.MD5(), backend=default_backend())
+        digest.update(b"test")
+        digest.finalize()
+        status = "FIPS mode is NOT active — MD5 succeeded."
+        color = "red"
+    except Exception:
+        status = "FIPS mode is ACTIVE — MD5 is blocked."
+        color = "green"
 
-if __name__ == "__main__":
-    serve(app, host="0.0.0.0", port=8080)
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>FIPS Status</title></head>
+    <body style="font-family: Arial; text-align: center; padding-top: 5em;">
+        <h1 style="color: {color};">{status}</h1>
+    </body>
+    </html>
+    """

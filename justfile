@@ -6,10 +6,22 @@ IMAGE_NAME := "fips-python"
 TAG := "3.11.12" # tag with python version
 PLATFORM := "linux/arm64"
 DOCKERFILE := "Dockerfile"
+BUILD_ARCH := "linux-x86_64"
 
-# Build image
 build:
-	docker buildx build --platform {{PLATFORM}} -t {{IMAGE_NAME}}:{{TAG}} -f {{DOCKERFILE}} .
+    docker buildx build \
+      --platform linux/amd64 \
+      --build-arg TARGETARCH=amd64 \
+      --build-arg BUILD_ARCH={{BUILD_ARCH}} \
+      -t fips-python:{{TAG}} .
+
+build-mac:
+    docker buildx build \
+      --platform linux/arm64 \
+      --build-arg TARGETARCH=arm64 \
+      --build-arg BUILD_ARCH=linux-aarch64 \
+      -t fips-python:{{TAG}} .
+
 
 # Build and load to local docker daemon
 build-load:
@@ -17,11 +29,22 @@ build-load:
 
 # Build and push to remote registry
 build-push:
-	docker buildx build --platform {{PLATFORM}} -t {{IMAGE_NAME}}:{{TAG}} --push -f {{DOCKERFILE}} .
+    docker buildx build \
+      --platform linux/arm64 \
+      --tag ${IMAGE_NAME}:${IMAGE_TAG} \
+      --push .
 
 # Run the image
 run:
 	docker run --rm -e OPENSSL_FIPS=1 {{IMAGE_NAME}}:{{TAG}}
+
+# Build and run the test container (Dockerfile.test)
+test:
+    @echo "" Building test container..."
+    docker build -f Dockerfile.test -t fips-python:test .
+    @echo " Running test container on http://localhost:8080"
+    docker run --rm -p 8080:8080 fips-python:test
+
 
 # Launch a shell in the container
 shell:
@@ -38,6 +61,15 @@ trivy-scan:
 # Generate SBOM in SPDX format
 trivy-sbom:
 	trivy image --format spdx-json --output sbom.spdx.json {{IMAGE_NAME}}:{{TAG}}
+
+dive:
+	dive fips-python:{{TAG}}
+
+sign-image:
+    cosign sign --yes ${IMAGE_NAME}:${IMAGE_TAG}
+
+publish:
+    just build-push && just sign-image
 
 # Run full build + scan + sbom
 build-all:

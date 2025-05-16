@@ -1,0 +1,31 @@
+# Dockerfile.test
+FROM fips-python:latest
+
+WORKDIR /app
+
+# Re-copy in case test deps have changed
+COPY requirements.txt /app/
+
+RUN openssl list -providers
+
+# Smoke test
+RUN python3 - <<EOF
+import ssl, sys
+from cryptography.hazmat.primitives import hashes
+
+print(ssl.OPENSSL_VERSION)
+
+try:
+    hashes.Hash(hashes.SHA256())
+    print('cryptography hash test passed')
+except Exception as e:
+    print(f'WARNING: cryptography hash test failed: {e}', file=sys.stderr)
+EOF
+
+# Optionally echo env status
+RUN python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
+
+# Install test-only deps (excluding cryptography)
+RUN pip install --no-deps --no-binary cryptography -r requirements.txt
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
