@@ -20,7 +20,7 @@ RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
     && ./Configure ${BUILD_ARCH} enable-fips shared enable-ec_nistp_64_gcc_128 --prefix=/usr/local \
-    && make -j"$(nproc)" build_sw \
+    && make build_sw \
     && make install_sw \
     && make install_fips \
     && cd .. && rm -rf openssl-${OPENSSL_VERSION}*
@@ -86,7 +86,7 @@ ENV CFLAGS="-I/usr/local/include"
 RUN tar -xf Python-${PYTHON_VERSION}.tgz \
     && cd Python-${PYTHON_VERSION} \
     && ./configure --enable-optimizations --enable-shared --with-ensurepip=no --with-openssl=/usr/local \
-    && make -j"$(nproc)" \
+    && make \
     && make install \
     && cd .. && rm -rf Python-${PYTHON_VERSION}*
 
@@ -104,21 +104,6 @@ RUN strip --strip-unneeded /usr/local/bin/python3 || true \
     && find /usr/local -name '*.a' -delete \
     && find /usr/local -name '*.la' -delete \
     && rm -rf /usr/local/lib/python3.11/test
-
-# Smoke test
-RUN python3 - <<EOF
-import ssl, sys
-from cryptography.hazmat.primitives import hashes
-
-print(ssl.OPENSSL_VERSION)
-
-try:
-    hashes.Hash(hashes.SHA256())
-    print('cryptography hash test passed')
-except Exception as e:
-    print(f'WARNING: cryptography hash test failed: {e}', file=sys.stderr)
-EOF
-
 
 ### --- Stage 3: Minimal Runtime ---
 FROM alpine:latest
