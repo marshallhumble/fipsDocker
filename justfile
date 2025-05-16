@@ -6,10 +6,22 @@ IMAGE_NAME := "fips-python"
 TAG := "3.11.12" # tag with python version
 PLATFORM := "linux/arm64"
 DOCKERFILE := "Dockerfile"
+BUILD_ARCH := "linux-x86_64"
 
-# Build image
 build:
-	docker buildx build --platform {{PLATFORM}} -t {{IMAGE_NAME}}:{{TAG}} -f {{DOCKERFILE}} .
+    docker buildx build \
+      --platform linux/amd64 \
+      --build-arg TARGETARCH=amd64 \
+      --build-arg BUILD_ARCH={{BUILD_ARCH}} \
+      -t fips-python:latest .
+
+build-mac:
+    docker buildx build \
+      --platform linux/arm64 \
+      --build-arg TARGETARCH=arm64 \
+      --build-arg BUILD_ARCH=linux-aarch64 \
+      -t fips-python:mac .
+
 
 # Build and load to local docker daemon
 build-load:
