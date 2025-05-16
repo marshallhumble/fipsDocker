@@ -62,6 +62,12 @@ RUN apk add --no-cache \
     zlib-dev bzip2-dev sqlite-dev libxml2-dev libxslt-dev libintl \
     ca-certificates curl libgcc wget
 
+# Need to download before we turn on fips mode
+RUN wget -q https://bootstrap.pypa.io/get-pip.py \
+    && wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable && \
+           ln -s /root/.cargo/bin/* /usr/local/bin/
+
 COPY --from=opensslbuild /usr/local /usr/local
 COPY --from=opensslbuild /etc/ssl /etc/ssl
 
@@ -73,21 +79,15 @@ ENV LDFLAGS="-L/usr/local/lib"
 ENV CPPFLAGS="-I/usr/local/include"
 ENV CFLAGS="-I/usr/local/include"
 
-# Install Rust with rustup (before enabling FIPS networking restrictions)
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable && \
-    ln -s /root/.cargo/bin/* /usr/local/bin/
-
-# Download and build Python
-RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
-    && tar -xf Python-${PYTHON_VERSION}.tgz \
+# Build Python
+RUN tar -xf Python-${PYTHON_VERSION}.tgz \
     && cd Python-${PYTHON_VERSION} \
     && ./configure --enable-optimizations --enable-shared --with-ensurepip=no --with-openssl=/usr/local \
     && make -j1 \
     && make install
 
 # Install pip and cryptography
-RUN wget -q https://bootstrap.pypa.io/get-pip.py \
-    && python3 get-pip.py \
+RUN python3 get-pip.py \
     && rm get-pip.py \
     && pip install --no-binary cryptography cryptography
 
