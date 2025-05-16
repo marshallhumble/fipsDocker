@@ -1,0 +1,17 @@
+# Dockerfile.test
+FROM fips-python:latest
+
+WORKDIR /app
+
+# Re-copy in case test deps have changed
+COPY requirements.txt /app/
+
+RUN openssl list -providers
+
+# Optionally echo env status
+RUN python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
+
+# Install test-only deps (excluding cryptography)
+RUN pip install --no-deps --no-binary cryptography -r requirements.txt
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]

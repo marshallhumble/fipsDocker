@@ -18,8 +18,7 @@ RUN apk add --no-cache \
 RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure ${BUILD_ARCH} enable-fips shared enable-ec_nistp_64_gcc_128 --prefix=/usr/local \
-    && make -j1 \
+    && ./Configure ${BUILD_ARCH} enable-fips shared no-tests no-unit-test enable-ec_nistp_64_gcc_128 --prefix=/usr/local \
     && make install \
     && make install_fips
 
@@ -134,21 +133,7 @@ COPY --from=pythoncrypto  /usr/local/bin/pip /usr/local/bin
 COPY --from=pythoncrypto  /usr/local/lib /usr/local/lib
 COPY --from=pythoncrypto /usr/lib/libgcc* /usr/lib/
 
-# Copy app source and required cryptography libs
-COPY app.py requirements.txt /app/
-
 COPY --from=pythoncrypto \
   /usr/local/lib/python3.11/site-packages/cryptography \
   /usr/local/lib/python3.11/site-packages/cryptography-*.dist-info \
   /usr/local/lib/python3.11/site-packages/
-
-
-RUN openssl list -providers
-
-WORKDIR /app
-
-# Use pip to install the rest — but exclude cryptography
-RUN pip install --no-deps --no-binary cryptography -r requirements.txt
-
-
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]

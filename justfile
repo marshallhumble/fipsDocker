@@ -35,6 +35,14 @@ build-push:
 run:
 	docker run --rm -e OPENSSL_FIPS=1 {{IMAGE_NAME}}:{{TAG}}
 
+# Build and run the test container (Dockerfile.test)
+test:
+    @echo "🔧 Building test container..."
+    docker build -f Dockerfile.test -t fips-python:test .
+    @echo "🚀 Running test container on http://localhost:8080"
+    docker run --rm -p 8080:8080 fips-python:test
+
+
 # Launch a shell in the container
 shell:
 	docker run --rm -it {{IMAGE_NAME}}:{{TAG}} sh
