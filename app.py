@@ -11,10 +11,10 @@ async def fips_check():
         digest = hashes.Hash(hashes.MD5(), backend=default_backend())
         digest.update(b"test")
         digest.finalize()
-        status = "❌ FIPS mode is NOT active — MD5 succeeded."
+        status = "FIPS mode is NOT active — MD5 succeeded."
         color = "red"
     except Exception:
-        status = "✅ FIPS mode is ACTIVE — MD5 is blocked."
+        status = "FIPS mode is ACTIVE — MD5 is blocked."
         color = "green"
 
     return f"""

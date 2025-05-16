@@ -1,8 +1,13 @@
-name: FIPS Docker Build & Scan
+name: CI Build & Security Scan
 
 on:
   pull_request:
-    branches: [ main ]
+    paths:
+      - '**/Dockerfile'
+      - '**.py'
+      - '**/requirements.txt'
+      - '.github/workflows/**'
+  workflow_dispatch:
 
 jobs:
   build-and-scan:
@@ -10,40 +15,58 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write  # Needed to post PR comments
+      pull-requests: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Just
-      run: |
-        curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Install Trivy
-      run: |
-        sudo apt-get update && sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update && sudo apt-get install -y trivy
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Docker Build (Make)
-      run: make build
+      - name: Build image (amd64)
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg TARGETARCH=amd64 \
+            -t fips-python:${{ github.sha }} \
+            --load .
 
-    - name: Trivy Vulnerability Scan
-      run: trivy image --severity CRITICAL,HIGH --format table --output trivy-vuln.txt fips-python:latest
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          version: '0.50.0'
 
-    - name: Trivy SBOM Generation
-      run: trivy image --format spdx-json --output sbom.spdx.json fips-python:latest
+      - name: Generate SBOM (SPDX)
+        run: |
+          trivy image --format spdx-json --output sbom.spdx.json fips-python:${{ github.sha }}
 
-    - name: Post Trivy Summary to PR
-      uses: marocchino/sticky-pull-request-comment@v2
-      with:
-        header: trivy-summary
-        message: |
-          ### Trivy Vulnerability Scan (`CRITICAL` and `HIGH`)
-          ```
-          ${{ steps.scan.outputs.summary }}
-          ```
-        file: trivy-vuln.txt
-        platform: linux/amd64,linux/arm64
+      - name: Scan for CVEs
+        id: scan
+        run: |
+          trivy image --severity CRITICAL,HIGH --exit-code 0 --format table fips-python:${{ github.sha }} > vulnscan.txt
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          head -n 20 vulnscan.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post results as PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: fips-image-security
+          message: |
+            ### FIPS Python Image Security Summary
+            **Image Tag:** `fips-python:${{ github.sha }}`
+
+            **Top CVEs Detected:**
+            ```
+            ${{ steps.scan.outputs.summary || 'No critical/high vulnerabilities found.' }}
+            ```
+
+            SBOM is attached as [sbom.spdx.json](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})

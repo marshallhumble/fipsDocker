@@ -2,7 +2,8 @@
 FROM alpine:latest AS opensslbuild
 
 ARG OPENSSL_VERSION=3.1.2
-ARG BUILD_ARCH=linux-aarch64
+ARG TARGETARCH
+ARG BUILD_ARCH=linux-${TARGETARCH}
 
 ENV PATH=/usr/local/bin:$PATH
 ENV LANG=C.UTF-8
