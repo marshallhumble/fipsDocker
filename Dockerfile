@@ -69,7 +69,7 @@ RUN apk add --no-cache \
 RUN wget -q https://bootstrap.pypa.io/get-pip.py \
     && wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz \
     && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable && \
-           ln -s /root/.cargo/bin/* /usr/local/bin/ \
+           ln -s /root/.cargo/bin/* /usr/local/bin/
 
 RUN python3 get-pip.py \
     && rm get-pip.py
