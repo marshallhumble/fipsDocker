@@ -31,13 +31,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build image (amd64)
+      - name: Build Docker image
         run: |
           docker buildx build \
             --platform linux/amd64 \
             --build-arg TARGETARCH=amd64 \
-            -t fips-python:${{ github.sha }} \
-            --load .
+            --build-arg BUILD_ARCH=linux-x86_64 \
+            -t my-fips-python-app .
 
       - name: Install Trivy
         uses: aquasecurity/trivy-action@master
