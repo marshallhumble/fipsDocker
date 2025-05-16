@@ -13,14 +13,14 @@ build:
       --platform linux/amd64 \
       --build-arg TARGETARCH=amd64 \
       --build-arg BUILD_ARCH={{BUILD_ARCH}} \
-      -t fips-python:latest .
+      -t fips-python:{{TAG}} .
 
 build-mac:
     docker buildx build \
       --platform linux/arm64 \
       --build-arg TARGETARCH=arm64 \
       --build-arg BUILD_ARCH=linux-aarch64 \
-      -t fips-python:mac .
+      -t fips-python:{{TAG}} .
 
 
 # Build and load to local docker daemon
@@ -40,9 +40,9 @@ run:
 
 # Build and run the test container (Dockerfile.test)
 test:
-    @echo "🔧 Building test container..."
+    @echo "" Building test container..."
     docker build -f Dockerfile.test -t fips-python:test .
-    @echo "🚀 Running test container on http://localhost:8080"
+    @echo " Running test container on http://localhost:8080"
     docker run --rm -p 8080:8080 fips-python:test
 
 
@@ -61,6 +61,9 @@ trivy-scan:
 # Generate SBOM in SPDX format
 trivy-sbom:
 	trivy image --format spdx-json --output sbom.spdx.json {{IMAGE_NAME}}:{{TAG}}
+
+dive:
+	dive fips-python:{{TAG}}
 
 sign-image:
     cosign sign --yes ${IMAGE_NAME}:${IMAGE_TAG}
