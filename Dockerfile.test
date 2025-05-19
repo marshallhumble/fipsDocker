@@ -1,16 +1,16 @@
 # Dockerfile.test
-FROM fips-python:latest
+FROM fips-python:3.11.12
 
 WORKDIR /app
 
 # Re-copy in case test deps have changed
 COPY requirements.txt /app/
-
+COPY app.py .
 RUN openssl list -providers
 
 # Smoke test
 RUN python3 - <<EOF
-import ssl, sys
+import ssl, sys, traceback
 from cryptography.hazmat.primitives import hashes
 
 print(ssl.OPENSSL_VERSION)
@@ -19,7 +19,9 @@ try:
     hashes.Hash(hashes.SHA256())
     print('cryptography hash test passed')
 except Exception as e:
-    print(f'WARNING: cryptography hash test failed: {e}', file=sys.stderr)
+    print(f'WARNING: cryptography hash test failed: {e}')
+    traceback.print_exc(file=sys.stderr)
+    sys.exit(1)
 EOF
 
 # Optionally echo env status

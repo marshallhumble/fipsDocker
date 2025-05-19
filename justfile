@@ -40,7 +40,7 @@ run:
 
 # Build and run the test container (Dockerfile.test)
 test:
-    @echo "" Building test container..."
+    @echo  "Building test container..."
     docker build -f Dockerfile.test -t fips-python:test .
     @echo " Running test container on http://localhost:8080"
     docker run --rm -p 8080:8080 fips-python:test

@@ -13,7 +13,7 @@ async def fips_check():
         digest.finalize()
         status = "FIPS mode is NOT active — MD5 succeeded."
         color = "red"
-    except Exception:
+    except Exception as e:
         status = "FIPS mode is ACTIVE — MD5 is blocked."
         color = "green"
 
