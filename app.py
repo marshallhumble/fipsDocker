@@ -7,13 +7,15 @@ app = FastAPI()
 
 @app.get("/", response_class=HTMLResponse)
 async def fips_check():
+    status_code = 200
     try:
         digest = hashes.Hash(hashes.MD5(), backend=default_backend())
         digest.update(b"test")
         digest.finalize()
         status = "FIPS mode is NOT active — MD5 succeeded."
         color = "red"
-    except Exception as e:
+    except Exception:
+        status_code = 500
         status = "FIPS mode is ACTIVE — MD5 is blocked."
         color = "green"
 
@@ -25,4 +27,4 @@ async def fips_check():
         <h1 style="color: {color};">{status}</h1>
     </body>
     </html>
-    """
+    """, status_code
