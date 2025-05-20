@@ -15,7 +15,7 @@ Built for secure workloads in regulated environments like that need to be FIPS *
 - OpenSSL 3.1.2 ([FIPS 140-3](https://openssl-library.org/post/2025-03-11-fips-140-3/)) compiled with FIPS support
 - Python 3.11.12 compiled against FIPS OpenSSL
 - `cryptography` built from source with FIPS compliance
-- Final image is ~350MB and stripped of unneeded files
+- Final image is ~166MB and stripped of unneeded files
 - SBOM + CVE scan via [Trivy](https://github.com/aquasecurity/trivy)
 
 ---
