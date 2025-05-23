@@ -16,7 +16,8 @@ Built for secure workloads in regulated environments like that need to be FIPS *
 - Python 3.11.12 compiled against FIPS OpenSSL
 - `cryptography` built from source with FIPS compliance
 - Final image is ~166MB and stripped of unneeded files
-- SBOM + CVE scan via [Trivy](https://github.com/aquasecurity/trivy)
+
+https://hub.docker.com/repository/docker/marshallhumble/fips-python/general
 
 ---
 
