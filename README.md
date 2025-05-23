@@ -44,13 +44,6 @@ Repo Structure:
 License:
 MIT 
 
-## Actions 
+## Issues
 
-This repo includes a GitHub Actions workflow to:
-
-* Build on each PR
-* Scan for CVEs
-* Generate SBOM
-* Post results as a comment to the PR
-
-Pull requests welcome! Open issues for bugs or feature suggestions.
+For any issues of improvements please either open an issue or PR
