@@ -134,6 +134,8 @@ COPY --from=pythoncrypto \
 
 RUN apk add --no-cache shadow && \
     useradd -U -u 1000 appuser && \
+    chown -R 1000:1000 /usr/local/lib/python3.11/site-packages/cryptography \
+                       /usr/local/lib/python3.11/site-packages/cryptography-*.dist-info
     chown -R 1000:1000 /usr/local/lib/python3.11/site-packages/ /usr/local/bin
 
 USER 1000
