@@ -90,7 +90,7 @@ The following findings from automated scans are acknowledged and accepted:
 |-----|---------|----------|--------|
 | CVE-2023-45853 | zlib1g | CRITICAL | Affects `minizip` API only, not reachable via Python or this image. Debian `will_not_fix`. |
 | CVE-2024-10041 | libpam | MEDIUM | PAM is present as a `useradd` dependency only. No PAM authentication is performed in this image. Debian `will_not_fix`. |
-
+| GHSA-pwjx-qhcg-rvj4 | rustls-webpki | MEDIUM | Transitive Rust dependency bundled in the `cryptography` sdist. Fix requires `rustls-webpki` >= 0.103.10, which is not yet pulled in by `cryptography==46.0.5` (current latest). No upstream release available. Will remediate on next `cryptography` release. |
 All other findings are remediated in the current tag or tracked in open issues.
 
 ---
@@ -123,6 +123,7 @@ To scan the current image yourself:
 ```bash
 trivy image marshallhumble/fips-python:3.11.12
 ```
+
 
 ---
 

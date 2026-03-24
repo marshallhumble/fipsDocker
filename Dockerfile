@@ -29,14 +29,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # no-legacy removes IDEA, RC2, single-DES and other non-FIPS algorithms.
 # install_sw and install_fips must remain single-threaded.
 RUN case "${TARGETARCH}" in \
-      amd64) BUILD_ARCH="linux-x86_64" ;; \
-      arm64) BUILD_ARCH="linux-aarch64" ;; \
-      *)     BUILD_ARCH="linux-${TARGETARCH}" ;; \
+      amd64) BUILD_ARCH="linux-x86_64"; EC_FLAG="enable-ec_nistp_64_gcc_128" ;; \
+      arm64) BUILD_ARCH="linux-aarch64"; EC_FLAG="" ;; \
+      *)     BUILD_ARCH="linux-${TARGETARCH}"; EC_FLAG="" ;; \
     esac \
     && wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
     && tar -xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure ${BUILD_ARCH} enable-fips no-legacy shared enable-ec_nistp_64_gcc_128 --prefix=/usr/local \
+    && ./Configure ${BUILD_ARCH} enable-fips no-legacy shared ${EC_FLAG} --prefix=/usr/local \
     && make -j"$(nproc)" build_sw \
     && make install_sw \
     && make install_fips \
@@ -157,7 +157,7 @@ RUN mkdir -p /root/.cargo && printf \
 
 RUN uv pip install --system maturin cffi setuptools
 
-RUN uv pip install --system --no-build-isolation --no-binary cryptography cryptography
+RUN uv pip install --system --no-build-isolation --no-binary cryptography
 
 RUN find /usr/local -name '*.a' -delete \
     && find /usr/local -name '*.la' -delete
@@ -195,11 +195,6 @@ COPY --from=pythoncrypto /usr/local/bin/python3 /usr/local/bin/
 COPY --from=pythoncrypto /usr/local/bin/uv /usr/local/bin/
 COPY --from=pythoncrypto /usr/local/lib /usr/local/lib
 
-COPY --from=pythoncrypto \
-  /usr/local/lib/python3.11/site-packages/cryptography \
-  /usr/local/lib/python3.11/site-packages/cryptography-*.dist-info \
-  /usr/local/lib/python3.11/site-packages/
-
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/openssl.conf && ldconfig
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
@@ -207,8 +202,7 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN useradd -U -u 1000 appuser && \
     chown -R 1000:1000 \
       /usr/local/lib/python3.11/site-packages/cryptography \
-      /usr/local/lib/python3.11/site-packages/ \
-      /usr/local/bin && \
+      /usr/local/lib/python3.11/site-packages/ && \
     chown -R 1000:1000 /etc/ssl && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
