@@ -15,7 +15,6 @@ build-local:
     docker buildx build \
       --platform linux/{{NATIVE_ARCH}} \
       --build-arg TARGETARCH={{NATIVE_ARCH}} \
-      --build-arg BUILD_ARCH={{NATIVE_BUILD_ARCH}} \
       --load \
       -t {{IMAGE_NAME}}:{{TAG}} \
       -f {{DOCKERFILE}} .
@@ -25,7 +24,6 @@ build:
     docker buildx build \
       --platform linux/amd64 \
       --build-arg TARGETARCH=amd64 \
-      --build-arg BUILD_ARCH=linux-x86_64 \
       --load \
       -t {{IMAGE_NAME}}:{{TAG}} \
       -f {{DOCKERFILE}} .
@@ -35,7 +33,6 @@ build-mac:
     docker buildx build \
       --platform linux/arm64 \
       --build-arg TARGETARCH=arm64 \
-      --build-arg BUILD_ARCH=linux-aarch64 \
       --load \
       -t {{IMAGE_NAME}}:{{TAG}} \
       -f {{DOCKERFILE}} .
