@@ -3,9 +3,9 @@ FROM fips-python:3.11.12
 
 WORKDIR /app
 
-# Re-copy in case test deps have changed
 COPY requirements.txt /app/
 COPY app.py .
+
 RUN openssl list -providers
 
 # Smoke test
@@ -24,10 +24,11 @@ except Exception as e:
     sys.exit(1)
 EOF
 
-# Optionally echo env status
 RUN python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
 
-# Install test-only deps (excluding cryptography)
-RUN pip install --no-deps --no-binary cryptography -r requirements.txt
+# Install test-only deps. cryptography is already present in the base image
+# built from source. --no-binary-package ensures it is not overwritten by a
+# pre-built wheel if pulled as a transitive dep.
+RUN uv pip install --system --no-binary cryptography -r requirements.txt
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
