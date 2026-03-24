@@ -182,7 +182,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # libgcc-s1 is needed by the cryptography Rust extension. Installing via apt
 # handles the arch-dependent path (/usr/lib/x86_64-linux-gnu vs aarch64).
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     libgcc-s1 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
