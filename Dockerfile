@@ -27,7 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # so this works correctly for both single-platform --load builds and
 # multi-platform --push builds where buildx injects TARGETARCH per platform.
 # no-legacy removes IDEA, RC2, single-DES and other non-FIPS algorithms.
-# install_sw and install_fips must remain single-threaded.
+# enable-ec_nistp_64_gcc_128 is an amd64-only optimisation; it is omitted on
+# arm64 where it is not valid. install_sw and install_fips must remain
+# single-threaded.
 RUN case "${TARGETARCH}" in \
       amd64) BUILD_ARCH="linux-x86_64"; EC_FLAG="enable-ec_nistp_64_gcc_128" ;; \
       arm64) BUILD_ARCH="linux-aarch64"; EC_FLAG="" ;; \
@@ -95,6 +97,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+# uv is copied here so it is available in the final runtime image via the
+# COPY --from=pythoncrypto step in Stage 3. It is not used as the installer
+# in this stage to avoid QEMU abort issues during cross-platform arm64 builds.
 COPY --from=ghcr.io/astral-sh/uv:0.11.0 /uv /usr/local/bin/uv
 
 # Downloads happen while Debian's libssl3 is present for wget HTTPS.
@@ -148,16 +153,23 @@ RUN python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
 # in /usr/local/lib. gcc invokes the system linker which reads ldconfig and
 # finds them correctly. Both targets are listed so this works for amd64 and
 # arm64 multi-platform builds.
-# --no-build-isolation disables PEP 517 subprocess isolation so uv inherits
+# --no-build-isolation disables PEP 517 subprocess isolation so pip inherits
 # our OPENSSL_* environment variables. maturin, cffi, and setuptools must be
 # pre-installed since they would normally be fetched by the isolated build.
 RUN mkdir -p /root/.cargo && printf \
   '[target.x86_64-unknown-linux-gnu]\nlinker = "gcc"\nrustflags = ["-L", "/usr/local/lib", "-C", "link-arg=-Wl,-rpath,/usr/local/lib"]\n\n[target.aarch64-unknown-linux-gnu]\nlinker = "gcc"\nrustflags = ["-L", "/usr/local/lib", "-C", "link-arg=-Wl,-rpath,/usr/local/lib"]\n' \
   > /root/.cargo/config.toml
 
-RUN uv pip install --system maturin cffi setuptools
-
-RUN uv pip install --system --no-build-isolation --no-binary cryptography
+# Bootstrap pip via get-pip.py (Python was built with --with-ensurepip=no),
+# install build dependencies, build cryptography from source against our FIPS
+# OpenSSL, then remove pip and the build tools so they do not carry through
+# into Stage 3 via the COPY /usr/local/lib step.
+RUN wget https://bootstrap.pypa.io/get-pip.py \
+    && python3 get-pip.py \
+    && rm get-pip.py \
+    && pip3 install maturin cffi setuptools \
+    && pip3 install --no-build-isolation --no-binary cryptography cryptography \
+    && pip3 uninstall -y pip setuptools maturin cffi
 
 RUN find /usr/local -name '*.a' -delete \
     && find /usr/local -name '*.la' -delete
@@ -182,6 +194,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # libgcc-s1 is needed by the cryptography Rust extension. Installing via apt
 # handles the arch-dependent path (/usr/lib/x86_64-linux-gnu vs aarch64).
+# apt-get upgrade ensures all Debian security patches are applied at build
+# time, reducing CVE findings in the base layer.
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     libgcc-s1 \
     ca-certificates \
