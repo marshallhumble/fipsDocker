@@ -28,7 +28,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Build and install OpenSSL with FIPS. BUILD_ARCH is derived from TARGETARCH
 # so this works correctly for both single-platform --load builds and
 # multi-platform --push builds where buildx injects TARGETARCH per platform.
-# no-legacy removes IDEA, RC2, single-DES and other non-FIPS algorithms.
+# no-legacy removes the legacy provider; the algorithm-specific no-* flags
+# (no-idea, no-rc4, no-bf, no-cast, no-seed) cause opensslconf.h to define
+# the matching OPENSSL_NO_* macros so dependents like the cryptography Rust
+# binding can detect that those symbols are absent and skip referencing them
+# at compile time. Without these flags, the build of cryptography succeeds
+# but the resulting _rust.abi3.so fails to load with
+# "undefined symbol: EVP_idea_ecb".
 # enable-ec_nistp_64_gcc_128 is an amd64-only optimisation; it is omitted on
 # arm64 where it is not valid. install_sw and install_fips must remain
 # single-threaded.
@@ -41,7 +47,9 @@ RUN case "${TARGETARCH}" in \
     && echo "${OPENSSL_SHA256}  openssl-${OPENSSL_VERSION}.tar.gz" | sha256sum -c - \
     && tar -xf openssl-${OPENSSL_VERSION}.tar.gz \
     && cd openssl-${OPENSSL_VERSION} \
-    && ./Configure ${BUILD_ARCH} enable-fips no-legacy shared ${EC_FLAG} --prefix=/usr/local \
+    && ./Configure ${BUILD_ARCH} enable-fips \
+         no-legacy no-idea no-rc4 no-bf no-cast no-seed \
+         shared ${EC_FLAG} --prefix=/usr/local --libdir=lib \
     && make -j"$(nproc)" build_sw \
     && make install_sw \
     && make install_fips \
@@ -52,6 +60,12 @@ RUN case "${TARGETARCH}" in \
 # Template only — no .include for fipsmodule.cnf because that file must be
 # generated fresh on each machine at container startup, not baked into the
 # image. See docker-entrypoint.sh and README-FIPS.md for OpenSSL 3.1.2.
+# The CA trust file is set via the SSL_CERT_FILE env var on the runtime
+# image, not via the OpenSSL config — there is no [system_default_sect]
+# directive that takes ssl_cert_file. Keeping an empty/unused section here
+# with `config_diagnostics = 1` made fipsinstall succeed but the subsequent
+# `openssl list -providers` call fail with "module=system_default: unknown
+# module name" because OpenSSL tried to dlopen libsystem_default.so.
 RUN printf '%s\n' \
   'config_diagnostics = 1' \
   'openssl_conf = openssl_init' \
@@ -59,7 +73,6 @@ RUN printf '%s\n' \
   '[openssl_init]' \
   'providers = provider_sect' \
   'alg_section = algorithm_sect' \
-  'system_default = system_default_sect' \
   '' \
   '[provider_sect]' \
   'fips = fips_sect' \
@@ -70,9 +83,6 @@ RUN printf '%s\n' \
   '' \
   '[algorithm_sect]' \
   'default_properties = fips=yes' \
-  '' \
-  '[system_default_sect]' \
-  'ssl_cert_file = /etc/ssl/certs/ca-certificates.crt' \
   > /etc/ssl/openssl.cnf.tmpl
 
 
@@ -172,13 +182,14 @@ RUN mkdir -p /root/.cargo && printf \
 
 # Python was built with --with-ensurepip=no so there is no pip in the image.
 # uv installs packages directly without needing pip. Build cryptography from
-# source against our FIPS OpenSSL, then remove the build tools so they do not
-# carry through into Stage 3 via the COPY /usr/local/lib step. compileall
-# pre-generates .pyc files so the runtime user (uid 1000) does not need write
-# access to site-packages just to populate __pycache__.
+# source against our FIPS OpenSSL, then remove the build-only tools so they
+# do not carry through into Stage 3 via the COPY /usr/local/lib step. cffi
+# is a runtime dependency of cryptography >= 47 so it stays installed.
+# compileall pre-generates .pyc files so the runtime user (uid 1000) does
+# not need write access to site-packages just to populate __pycache__.
 RUN uv pip install --system maturin cffi setuptools \
     && uv pip install --system --no-build-isolation --no-binary cryptography cryptography \
-    && uv pip uninstall --system setuptools maturin cffi \
+    && uv pip uninstall --system setuptools maturin \
     && python3 -m compileall -q /usr/local/lib/python3.11 || true
 
 RUN find /usr/local -name '*.a' -delete \
@@ -201,6 +212,10 @@ ENV OPENSSL_MODULES=/usr/local/lib/ossl-modules
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV DEBIAN_FRONTEND=noninteractive
+# Suppress cryptography's startup warning about the legacy provider failing
+# to load. Our OpenSSL is built without the legacy provider by design and
+# cryptography only ever tries to use FIPS-approved algorithms here.
+ENV CRYPTOGRAPHY_OPENSSL_NO_LEGACY=1
 
 # libgcc-s1 is needed by the cryptography Rust extension. Installing via apt
 # handles the arch-dependent path (/usr/lib/x86_64-linux-gnu vs aarch64).
@@ -226,8 +241,10 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # The entrypoint runs as uid 1000 and writes exactly two files at startup:
 # /etc/ssl/openssl.cnf and /usr/local/ssl/fipsmodule.cnf. Pre-create both and
 # chown only those, so site-packages, the CA trust store, and other config
-# stay root-owned and read-only at runtime.
-RUN useradd -U -u 1000 appuser && \
+# stay root-owned and read-only at runtime. `-m` provisions /home/appuser so
+# tools like uv have a writable HOME for cache/config (consumers building on
+# top of this base image often pip/uv install as uid 1000).
+RUN useradd -m -U -u 1000 appuser && \
     touch /etc/ssl/openssl.cnf /usr/local/ssl/fipsmodule.cnf && \
     chown 1000:1000 /etc/ssl/openssl.cnf /usr/local/ssl/fipsmodule.cnf && \
     chmod 0640 /etc/ssl/openssl.cnf /usr/local/ssl/fipsmodule.cnf && \

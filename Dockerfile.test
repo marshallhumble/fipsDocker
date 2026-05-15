@@ -26,12 +26,17 @@ EOF
 
 RUN python3 -c "import ssl; print(ssl.OPENSSL_VERSION)"
 
-# Install test-only deps. cryptography is already present in the base image
-# built from source. --no-binary cryptography ensures it is not overwritten by
-# a pre-built wheel if pulled as a transitive dep. --require-hashes makes uv
-# refuse to install any package whose downloaded artifact does not match a
-# pinned hash in requirements.txt, blocking a compromised index or mirror from
-# substituting a different wheel.
+# Install test-only deps. The base image keeps /usr/local/lib site-packages
+# root-owned for defense-in-depth, so derived images switch to root for any
+# install steps and drop back to uid 1000 for the runtime CMD/ENTRYPOINT.
+# cryptography is already present in the base image built from source.
+# --no-binary cryptography ensures it is not overwritten by a pre-built wheel
+# if pulled as a transitive dep. --require-hashes makes uv refuse to install
+# any package whose downloaded artifact does not match a pinned hash in
+# requirements.txt, blocking a compromised index or mirror from substituting
+# a different wheel.
+USER root
 RUN uv pip install --system --require-hashes --no-binary cryptography -r requirements.txt
+USER 1000
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
